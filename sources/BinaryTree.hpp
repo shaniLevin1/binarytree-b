@@ -3,11 +3,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
-#include <map>
 #include <set>
 #include <stack>
 #include <iostream>
-
+#include<algorithm>
+using namespace std;
 namespace ariel {
     
 template<typename T>
@@ -15,16 +15,14 @@ class BinaryTree{
     private:
         struct Node {
             T _data;
-            bool _mark;
-            Node *_left, *_right, *_parent;
-            Node(const T& data, bool mark=false, Node* left = nullptr, Node* right = nullptr, Node* parent = nullptr)
-                : _data(data), _left(left), _right(right), _parent(parent), _mark(mark){}
+            Node *_left, *_right;
+            Node(const T& data, Node* left = nullptr, Node* right = nullptr)
+                : _data(data), _left(left), _right(right){}
         };
 
-        Node* _root=nullptr;
+        Node* _root;
         std::set<T>tree_nodes;
-        std::map<T,Node*> map;
-
+        
     public:
         BinaryTree(){}
 
@@ -64,7 +62,7 @@ class BinaryTree{
         BinaryTree &operator=(BinaryTree &&other) noexcept{
             _root = other._root;
             other._root = nullptr;
-            delete _root;
+            return *this;
         }
 
         BinaryTree(BinaryTree &&other) noexcept{
@@ -72,22 +70,15 @@ class BinaryTree{
             other._root = nullptr;
         }
         
-        BinaryTree& operator=(BinaryTree<T> other){
+        BinaryTree& operator=(BinaryTree other){
             if (this == &other){
                 return *this;
             }
-            delete this->_root;
-            this->_root = new Node(other._root->_data);
+            delete _root;
+            _root = new Node(other._root->_data);
             return *this;
         }
 
-        T &operator*() const{
-            return this->current->_data;
-        }
-
-        T *operator->() const{
-            return &(this->_current->_data);
-        }
         class preorder_iterator{
             private:
                 std::vector<Node*>pre_it;
@@ -95,12 +86,11 @@ class BinaryTree{
                 unsigned long index;
 
             public:
-                preorder_iterator(Node* root):current(root),index(0){ //constructor
-
-                    if(current!=nullptr){
-                        define_preorder(root);
-                        pre_it.push_back(nullptr);
-                    }
+                preorder_iterator(Node* root){ //constructor
+                    pre_it.clear();
+                    index=0;
+                    define_preorder(root);
+                    pre_it.push_back(nullptr);
                 } 
                 void define_preorder(Node* root){
                     if (root == nullptr){
@@ -113,29 +103,21 @@ class BinaryTree{
 
                 //++i
                 preorder_iterator &operator++() {
-                    if(index<pre_it.size()-1){
-                        ++index;
-                        return *this;
-                    }
-                    current=nullptr;
+                    ++index;
                     return *this;
                 }
                 //i++
                 preorder_iterator operator++(int) {
-                    if(index<pre_it.size()){
-                        preorder_iterator temp=*this;
-                        ++index;
-                        return temp;
-                    }
-                    current=nullptr;
-                    return *this;
+                    preorder_iterator temp=*this;
+                    ++index;
+                    return temp;
                 }
                 bool operator==(const preorder_iterator& other) const {
-                    return this->pre_it.at(index) == other.pre_it.at(index);
+                    return pre_it.at(index) == other.pre_it.at(other.index);
                 }
 
                 bool operator!=(const preorder_iterator& other) const {
-                    return pre_it.at(index) != other.pre_it.at(index);
+                    return pre_it.at(index) != other.pre_it.at(other.index);
                 }
                 T &operator*() {
                     return pre_it.at(index)->_data;
@@ -149,18 +131,16 @@ class BinaryTree{
         class inorder_iterator{
             private:
                 std::vector<Node*> in_it;
-                Node* current;
                 unsigned long index;
             public:
-                inorder_iterator(Node* root=nullptr):current(root),index(0){ //constructor
-                    if(current!=nullptr){
-                        define_inorder(root);
-                        in_it.push_back(nullptr);
-                        current=in_it.at(0);
-                    }
+                inorder_iterator(Node* root=nullptr){ 
+                    in_it.clear();
+                    index=0;
+                    define_inorder(root);
+                    in_it.push_back(nullptr);
                 } 
                 void define_inorder(Node* root){
-                     if (root==nullptr){
+                    if (root==nullptr){
                         return;
                     }
                     define_inorder(root->_left);
@@ -168,33 +148,23 @@ class BinaryTree{
                     define_inorder(root->_right);
                 }
                 const inorder_iterator &operator++() {
-                    if(index<in_it.size()-1){
-                        ++index;
-                        current= in_it.at(index);
-                        return *this;
-                    }
-                    current=nullptr;
+                    ++index;
                     return *this;
                 }
 
                 //i++
                 inorder_iterator operator++(int) {
-                    if(index<in_it.size()){
-                        inorder_iterator temp=*this;
-                        ++index;
-                        current= in_it.at(index-1);
-                        return temp;
-                    }
-                    current=nullptr;
-                    return *this;
+                    inorder_iterator temp=*this;
+                    ++index;
+                    return temp;
                 }
                 
                 bool operator==(const inorder_iterator& other) const {
-                    return this->in_it.at(index) == other.in_it.at(index);
+                    return this->in_it.at(index) == other.in_it.at(other.index);
                 }
 
                 bool operator!=(const inorder_iterator& other) const {
-                    return this->in_it.at(index) != other.in_it.at(index);
+                    return this->in_it.at(index) != other.in_it.at(other.index);
                 }
                 T &operator*() {
                     return this->in_it.at(index)->_data;
@@ -211,11 +181,11 @@ class BinaryTree{
                 Node* current;
                 unsigned long index;
             public:
-                postorder_iterator(Node* root=nullptr):current(root),index(0){ //constructor
-                    if(current!=nullptr){
-                        define_postorder(root);
-                        post_it.push_back(nullptr);
-                    }
+                postorder_iterator(Node* root=nullptr){ //constructor
+                    post_it.clear();
+                    index=0;
+                    define_postorder(root);
+                    post_it.push_back(nullptr);
                 } 
                 void define_postorder(Node* root){
                      if (root == nullptr){
@@ -228,31 +198,21 @@ class BinaryTree{
 
                 //++i
                 postorder_iterator &operator++() {
-                    if(index<post_it.size()-1){
-                        ++index;
-                        current= post_it.at(index);
-                        return *this;
-                    }
-                    current=nullptr;
+                    ++index;
                     return *this;
-                }
+                    }
                 //i++
                 postorder_iterator operator++(int) {
-                    if(index<post_it.size()){
-                        postorder_iterator temp=*this;
-                        ++index;
-                        current= post_it.at(index-1);
-                        return temp;
+                    postorder_iterator temp=*this;
+                    ++index;
+                    return temp;
                     }
-                    current=nullptr;
-                    return *this;
-                }
                 bool operator==(const postorder_iterator& other) const {
-                    return this->post_it.at(index) == other.post_it.at(index);
+                    return this->post_it.at(index) == other.post_it.at(other.index);
                 }
 
                 bool operator!=(const postorder_iterator& other) const {
-                    return this->post_it.at(index) != other.post_it.at(index);
+                    return this->post_it.at(index) !=other.post_it.at(other.index);
                 }
                 T &operator*() {
                     return this->post_it.at(index)->_data;
@@ -271,31 +231,49 @@ class BinaryTree{
                 this->_root->_data=node;
             }
             tree_nodes.insert(node);
-            map[node]=_root;
             return *this;
         }
-        BinaryTree<T>& add_left(const T& node, const T& node_to_add_left){
-            if(tree_nodes.count(node)==0){ //node is not in the tree
-                throw"execption";
+        Node *search_parent(Node *root,T parent){
+            if(root==nullptr||root->_data==parent){ 
+                return root;
             }
-            map[node_to_add_left]=new Node(node_to_add_left);
-            map[node]->_left=map[node_to_add_left];
-            tree_nodes.insert(node_to_add_left);
-            map[node_to_add_left]->_parent=map[node];
-            map[node_to_add_left]->_parent->_data=node;
-            return *this;
-        }
-        BinaryTree<T>& add_right(const T& node, const T& node_to_add_right){
-            if(tree_nodes.count(node)==0){ //node is not in the tree
-                throw"execption";
+            Node *node=search_parent(root->_left, parent);
+            if(node==nullptr){
+                return search_parent(root->_right, parent); 
             }
-            map[node_to_add_right]=new Node(node_to_add_right);
-            map[node]->_right=map[node_to_add_right];
-            tree_nodes.insert(node_to_add_right);
-            map[node_to_add_right]->_parent=map[node];
-            map[node_to_add_right]->_parent->_data=node;
+            return node;
+        }
+
+        BinaryTree<T> &add_left(T parent, T child){
+            Node *node=search_parent(_root, parent);
+            if(node==nullptr){
+                throw "parent is not exist";
+            }
+            if(node->_left==nullptr){
+                node->_left=new Node(child);
+            }
+            else{
+                node->_left->_data=child;
+            }   
+            tree_nodes.insert(child);
             return *this;
         }
+
+        BinaryTree<T> &add_right(T parent, T child){
+            Node *node=search_parent(_root, parent);
+            if(node==nullptr){
+                throw "parent is not exist";
+            }
+            if(node->_right==nullptr){
+                node->_right=new Node(child);
+            }
+            else{
+                node->_right->_data=child;
+            }
+            tree_nodes.insert(child);
+            return *this;
+        }
+
 
         friend std::ostream& operator<<(std::ostream& out, const BinaryTree<T> &bt){
             out<<"ss";
@@ -303,15 +281,15 @@ class BinaryTree{
         }
 
         preorder_iterator begin_preorder() {  
-            return preorder_iterator(this->_root); 
+            return preorder_iterator(_root); 
         } 
-        preorder_iterator end_preorder() {
+        preorder_iterator end_preorder(){
             return preorder_iterator(nullptr); 
         }
-        inorder_iterator begin_inorder() {
+        inorder_iterator begin_inorder() const{
             return inorder_iterator(_root); 
         }
-        inorder_iterator end_inorder() {
+        inorder_iterator end_inorder()const{
             return inorder_iterator(nullptr); 
         }
         postorder_iterator begin_postorder(){
@@ -321,10 +299,10 @@ class BinaryTree{
             return postorder_iterator(nullptr);
         }
 
-        inorder_iterator begin(){
+        inorder_iterator begin()const{
             return inorder_iterator(_root); 
         }
-        inorder_iterator end(){
+        inorder_iterator end()const{
             return inorder_iterator(nullptr); 
         }
 };
